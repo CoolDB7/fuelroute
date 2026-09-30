@@ -1,0 +1,91 @@
+{
+  "info": {
+    "name": "Fuel Route API",
+    "description": "Given a start/finish in the USA, returns the route, cheapest feasible fuel stops for a 500-mile-range vehicle, and total fuel cost at 10 MPG.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8000" }
+  ],
+  "item": [
+    {
+      "name": "Plan route: LA -> Jacksonville (long trip, multiple stops)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"start\": \"Los Angeles, CA\",\n  \"finish\": \"Jacksonville, FL\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/route/", "host": ["{{baseUrl}}"], "path": ["api", "route", ""] }
+      }
+    },
+    {
+      "name": "Plan route: short trip (no fuel stops needed)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"start\": \"Los Angeles, CA\",\n  \"finish\": \"San Diego, CA\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/route/", "host": ["{{baseUrl}}"], "path": ["api", "route", ""] }
+      }
+    },
+    {
+      "name": "Plan route: ZIP code inputs",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"start\": \"60601\",\n  \"finish\": \"80202\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/route/", "host": ["{{baseUrl}}"], "path": ["api", "route", ""] }
+      }
+    },
+    {
+      "name": "Plan route: raw coordinates",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"start\": \"41.8781,-87.6298\",\n  \"finish\": \"39.7392,-104.9903\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/route/", "host": ["{{baseUrl}}"], "path": ["api", "route", ""] }
+      }
+    },
+    {
+      "name": "Error: missing field (400)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"finish\": \"Denver, CO\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/route/", "host": ["{{baseUrl}}"], "path": ["api", "route", ""] }
+      }
+    },
+    {
+      "name": "Error: location outside USA (400)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"start\": \"Toronto, ON\",\n  \"finish\": \"Denver, CO\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/route/", "host": ["{{baseUrl}}"], "path": ["api", "route", ""] }
+      }
+    },
+    {
+      "name": "Map demo page",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/map/", "host": ["{{baseUrl}}"], "path": ["api", "map", ""] }
+      }
+    }
+  ]
+}

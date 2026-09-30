@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fuel route planner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    background: #f6f3ec; color: #21201c;
+  }
+  header {
+    padding: 18px 24px; border-bottom: 1px solid #ddd6c4;
+    display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap;
+  }
+  h1 { font-size: 1.15rem; font-weight: 600; margin: 0; letter-spacing: .01em; }
+  form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-left: auto; }
+  input {
+    font: inherit; padding: 7px 10px; border: 1px solid #c9c0a6; border-radius: 3px;
+    background: #fffdf7; min-width: 190px;
+  }
+  button {
+    font: inherit; padding: 7px 16px; border: 1px solid #2e5339; border-radius: 3px;
+    background: #2e5339; color: #f6f3ec; cursor: pointer;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  #layout { display: grid; grid-template-columns: 340px 1fr; height: calc(100vh - 64px); }
+  #map { height: 100%; }
+  #summary { padding: 18px; overflow-y: auto; border-right: 1px solid #ddd6c4; font-size: .93rem; }
+  #summary .headline { font-size: 1.6rem; margin: 0 0 2px; }
+  #summary .sub { color: #6b6553; margin: 0 0 18px; }
+  .stop { padding: 10px 0; border-top: 1px solid #e6e0cc; }
+  .stop .n { font-weight: 600; }
+  .stop .p { color: #6b6553; font-size: .85rem; }
+  #err { color: #a5311f; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Fuel route planner</h1>
+  <form id="f">
+    <input id="start" placeholder="Start (e.g. Los Angeles, CA)" value="Los Angeles, CA">
+    <input id="finish" placeholder="Finish (e.g. Jacksonville, FL)" value="Jacksonville, FL">
+    <button id="go">Plan route</button>
+  </form>
+</header>
+<div id="layout">
+  <div id="summary">Enter a start and finish, then click Plan route.</div>
+  <div id="map"></div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map = L.map('map').setView([39.5, -98.35], 4);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+}).addTo(map);
+let layer = L.layerGroup().addTo(map);
+
+document.getElementById('f').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const go = document.getElementById('go');
+  const summary = document.getElementById('summary');
+  go.disabled = true;
+  summary.innerHTML = 'Planning…';
+  layer.clearLayers();
+  try {
+    const resp = await fetch('/api/route/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        start: document.getElementById('start').value,
+        finish: document.getElementById('finish').value,
+      }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) { summary.innerHTML = '<div id="err">' + (data.error || resp.statusText) + '</div>'; return; }
+
+    const line = L.polyline(data.route_geometry, {color: '#2e5339', weight: 4}).addTo(layer);
+    L.marker([data.start.lat, data.start.lon]).addTo(layer).bindPopup('Start: ' + data.start.label);
+    L.marker([data.finish.lat, data.finish.lon]).addTo(layer).bindPopup('Finish: ' + data.finish.label);
+    data.fuel_stops.forEach((s, i) => {
+      L.circleMarker([s.lat, s.lon], {radius: 7, color: '#a5311f', fillColor: '#c9583f', fillOpacity: .9})
+        .addTo(layer)
+        .bindPopup(`#${i+1} ${s.name}<br>${s.city}, ${s.state}<br>$${s.price_per_gallon}/gal · mile ${s.mile_marker}`);
+    });
+    map.fitBounds(line.getBounds(), {padding: [24, 24]});
+
+    let html = `<p class="headline">$${data.total_fuel_cost_usd.toFixed(2)}</p>`
+      + `<p class="sub">${data.distance_miles} mi · ${data.total_gallons_purchased} gal purchased · ${data.fuel_stops.length} stop(s) · ${data.duration_hours} hr drive</p>`;
+    data.fuel_stops.forEach((s, i) => {
+      html += `<div class="stop"><div class="n">${i+1}. ${s.name} — ${s.city}, ${s.state}</div>`
+        + `<div class="p">mile ${s.mile_marker} · $${s.price_per_gallon}/gal · ${s.gallons_purchased} gal · $${s.cost.toFixed(2)}</div></div>`;
+    });
+    summary.innerHTML = html;
+  } catch (err) {
+    summary.innerHTML = '<div id="err">' + err + '</div>';
+  } finally {
+    go.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
